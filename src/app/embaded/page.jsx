@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 
 function EmbedContent() {
   const [copied, setCopied] = useState(false);
-  const [isOpen, setIsOpen] = useState(false); 
+  const [isOpen, setIsOpen] = useState(true); 
   
   const searchParams = useSearchParams();
   const userId = searchParams.get("userId");

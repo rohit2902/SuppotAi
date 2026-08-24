@@ -1,18 +1,25 @@
 "use client";
 
-import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
+import api from "../../lib/Axios";
+import axios from "axios";
+import { Eye, EyeOff } from "lucide-react";
 
 interface LoginModalProps {
   open: boolean;
   onClose: () => void;
+  onSuccess: () => void;
 }
 
-export default function LoginModal({ open, onClose }: LoginModalProps) {
+export default function LoginModal({
+  open,
+  onClose,
+  onSuccess,
+}: LoginModalProps) {
   const router = useRouter();
 
   useEffect(() => {
@@ -32,29 +39,36 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
       document.body.style.overflow = "";
     };
   }, [open, onClose]);
-  const [name , setName] = useState("")
+
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [showPassword, setShowPassword] = useState(false);
 
-  
+  useEffect(() => {
+    if (!open) {
+      setError("");
+      setLoading(false);
+    }
+  }, [open]);
+
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    
+    if (isLoading) return;
+
+    setLoading(true);
+    setError("");
 
     try {
-      setLoading(true);
-      const response = await axios.post("/api/auth/login", {
-        email: email,
-        password: password,
+      const response = await api.post("/api/auth/login", {
+        email,
+        password,
       });
       console.log("Login successful:", response.data);
-       router.push("/")
-       
-
+      onSuccess();
     } catch (err) {
       setError(
         axios.isAxiosError(err) && err.response?.data?.message
@@ -68,18 +82,19 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+    if (isLoading) return;
+
     setLoading(true);
+    setError("");
 
     try {
-      const response = await axios.post("/api/auth/register", {
-        name , 
-        email: email,
-        password: password,
+      const response = await api.post("/api/auth/register", {
+        name,
+        email,
+        password,
       });
-
       console.log("register successful:", response.data);
-      router.push("/");
+      onSuccess();
     } catch (err) {
       setError(
         axios.isAxiosError(err) && err.response?.data?.message
@@ -100,7 +115,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          {/* BLUE BACKGROUND */}
+          {/* BACKGROUND */}
           <motion.div
             className="absolute inset-0 bg-gray-250/80 backdrop-blur-md"
             initial={{ opacity: 0 }}
@@ -109,34 +124,18 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
             onClick={onClose}
           />
 
-          {/* BLUE GLOW */}
+          {/* GLOW */}
           <div className="pointer-events-none absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-black-500/20 blur-[120px]" />
 
           {/* MODAL */}
           <motion.div
-            initial={{
-              opacity: 0,
-              scale: 0.92,
-              y: 25,
-            }}
-            animate={{
-              opacity: 1,
-              scale: 1,
-              y: 0,
-            }}
-            exit={{
-              opacity: 0,
-              scale: 0.95,
-              y: 15,
-            }}
-            transition={{
-              duration: 0.25,
-              ease: "easeOut",
-            }}
+            initial={{ opacity: 0, scale: 0.92, y: 25 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
             onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#D8D2C2] shadow-2xl shadow-blue-950/50"
           >
-            {/* TOP BLUE GLOW */}
             <div className="absolute left-1/2 top-[-100px] h-[200px] w-[300px] -translate-x-1/2 rounded-full bg-black-600/20 blur-[80px]" />
 
             <div className="relative p-7 sm:p-8">
@@ -150,19 +149,18 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
               </button>
 
               {/* LOGO */}
-               <Link href="/" className="flex items-center gap-2">
-          <motion.div
-            whileHover={{ rotate: 10, scale: 1.08 }}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F5C9B0] text-black"
-          >
-            ✦
-          </motion.div>
+              <Link href="/" className="flex items-center gap-2">
+                <motion.div
+                  whileHover={{ rotate: 10, scale: 1.08 }}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F5C9B0] text-black"
+                >
+                  ✦
+                </motion.div>
+                <span className="text-lg font-semibold tracking-tight">
+                  SupportAI
+                </span>
+              </Link>
 
-          <span className="text-lg font-semibold tracking-tight">
-            SupportAI
-          </span>
-        </Link>
-                   
               {/* TITLE */}
               <h2 className="text-2xl font-semibold tracking-tight text-black mt-4">
                 {step === 2 ? "Create an account" : "Welcome back"}
@@ -174,69 +172,90 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
                   : "Login to manage your AI customer support agent."}
               </p>
 
-              {/* FORM */}
-              {step == 1 && (
-                <form onClick={handleLogin} className="mt-7 space-y-4">
+              {/* LOGIN FORM */}
+              {step === 1 && (
+                <form onSubmit={handleLogin} className="mt-7 space-y-4">
                   <div>
-                    <label className="mb-2 block text-sm font-medium  text-zinc-900">
+                    <label className="mb-2 block text-sm font-medium text-zinc-900">
                       Email
                     </label>
-
                     <input
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       type="email"
+                      required
                       placeholder="you@company.com"
                       className="h-12 w-full rounded-xl border border-black/10 bg-white px-4 text-sm text-black outline-none placeholder:text-zinc-600 transition focus:border-blue-500/60 focus:bg-white/[0.06] focus:ring-4 focus:ring-blue-500/10"
                     />
                   </div>
 
                   <div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <label className="text-sm font-medium text-zinc-900">
-                        Password
-                      </label>
-                    </div>
+                    <label className="mb-2 block text-sm font-medium text-zinc-900">
+                      Password
+                    </label>
 
-                    <input
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      type="password"
-                      placeholder="••••••••"
-                      className="h-12 w-full rounded-xl border  border-black/10 bg-white px-4 text-sm text-black px-4 text-sm text-white outline-none placeholder:text-zinc-600 transition focus:border-blue-500/60 focus:bg-white/[0.06] focus:ring-4 focus:ring-blue-800/10"
-                    />
-                    <button
-                      type="button"
-                      className="text-xs text-blue-400 transition hover:text-blue-300"
-                    >
-                      Forgot password?
-                    </button>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="h-12 w-full rounded-xl border border-black/10 bg-white px-4 pr-12 text-sm text-black outline-none"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-black cursor-pointer"
+                      >
+                        {showPassword ? (
+                          <EyeOff size={16} />
+                        ) : (
+                          <Eye size={16} />
+                        )}
+                      </button>
+                    </div>
                   </div>
+
+                  {error && (
+                    <div style={{ color: "red" }} className="text-sm">
+                      {error}
+                    </div>
+                  )}
 
                   <motion.button
                     type="submit"
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="h-12 w-full rounded-xl bg-blue-500 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-400 cursor-pointer"
+                    disabled={isLoading}
+                    whileHover={{ scale: isLoading ? 1 : 1.01 }}
+                    whileTap={{ scale: isLoading ? 1 : 0.98 }}
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-500 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Login →
+                    {isLoading ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Logging in...
+                      </>
+                    ) : (
+                      "Login →"
+                    )}
                   </motion.button>
                 </form>
               )}
 
-              {step == 2 && (
-                <form onClick={handleRegister} className="mt-7 space-y-4">
-                   <div>
+              {/* REGISTER FORM */}
+              {step === 2 && (
+                <form onSubmit={handleRegister} className="mt-7 space-y-4">
+                  <div>
                     <label className="mb-2 block text-sm font-medium text-zinc-900">
                       Name
                     </label>
-
                     <input
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       type="text"
+                      required
                       placeholder="enter your name"
-                      className="h-12 w-full rounded-xl border border-black/10 bg-white px-4 text-sm text-white outline-none placeholder:text-zinc-600 transition focus:border-blue-500/60 focus:bg-white/[0.06] focus:ring-4 focus:ring-blue-500/10"
+                      className="h-12 w-full rounded-xl border border-black/10 bg-white px-4 text-sm text-black outline-none placeholder:text-zinc-600 transition focus:border-blue-500/60 focus:bg-white/[0.06] focus:ring-4 focus:ring-blue-500/10"
                     />
                   </div>
 
@@ -244,40 +263,65 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
                     <label className="mb-2 block text-sm font-medium text-zinc-900">
                       Email
                     </label>
-
                     <input
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       type="email"
+                      required
                       placeholder="you@company.com"
-                      className="h-12 w-full rounded-xl border border-black/10 bg-white px-4 text-sm text-white outline-none placeholder:text-zinc-600 transition focus:border-blue-500/60 focus:bg-white/[0.06] focus:ring-4 focus:ring-blue-500/10"
+                      className="h-12 w-full rounded-xl border border-black/10 bg-white px-4 text-sm text-black outline-none placeholder:text-zinc-600 transition focus:border-blue-500/60 focus:bg-white/[0.06] focus:ring-4 focus:ring-blue-500/10"
                     />
                   </div>
 
-                  <div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <label className="text-sm font-medium text-zinc-900">
-                        Password
-                      </label>
+                 <div>
+                    <label className="mb-2 block text-sm font-medium text-zinc-900">
+                      Password
+                    </label>
+
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="h-12 w-full rounded-xl border border-black/10 bg-white px-4 pr-12 text-sm text-black outline-none"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-black cursor-pointer"
+                      >
+                        {showPassword ? (
+                          <EyeOff size={16} />
+                        ) : (
+                          <Eye size={16} />
+                        )}
+                      </button>
                     </div>
-
-                    <input
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      type="password"
-                      placeholder="••••••••"
-                      className="h-12 w-full rounded-xl border border-black/10 bg-white px-4 text-sm text-white outline-none placeholder:text-zinc-600 transition focus:border-blue-500/60 focus:bg-white/[0.06] focus:ring-4 focus:ring-blue-500/10"
-                    />
-                  
                   </div>
-                   {error && <div style={{ color: "red", marginBottom: "10px" }}>{error}</div>}
+
+                  {error && (
+                    <div style={{ color: "red" }} className="text-sm">
+                      {error}
+                    </div>
+                  )}
+
                   <motion.button
                     type="submit"
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="h-12 w-full rounded-xl bg-blue-500 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-400"
+                    disabled={isLoading}
+                    whileHover={{ scale: isLoading ? 1 : 1.01 }}
+                    whileTap={{ scale: isLoading ? 1 : 0.98 }}
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-500 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition cursor-pointer hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Login →
+                    {isLoading ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Creating account...
+                      </>
+                    ) : (
+                      "Create account →"
+                    )}
                   </motion.button>
                 </form>
               )}
@@ -290,24 +334,27 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
               </div>
 
               {/* GOOGLE */}
-              <button
+              {/* <button
                 onClick={() => signIn("google")}
                 type="button"
                 className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white text-sm font-medium text-black transition cursor-pointer"
               >
                 <span className="text-base">G</span>
                 Continue with Google
-              </button>
+              </button> */}
 
-              {/* REGISTER */}
+              {/* TOGGLE LOGIN/REGISTER */}
               <p className="mt-7 text-center text-sm text-zinc-500">
                 {step === 2
                   ? "Already have an account? "
                   : "Don't have an account? "}
                 <button
                   type="button"
-                  onClick={() => setStep(step === 2 ? 1 : 2)}
-                  className="font-medium text-blue-400 transition hover:text-blue-300"
+                  onClick={() => {
+                    setError("");
+                    setStep(step === 2 ? 1 : 2);
+                  }}
+                  className="font-medium text-blue-400 transition hover:text-blue-300 cursor-pointer"
                 >
                   {step === 2 ? "Log in" : "Create account"}
                 </button>

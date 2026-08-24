@@ -1,3 +1,5 @@
+
+
 (function () {
   const api_url = "http://localhost:3000/api/chat";
   const scriptTag = document.currentScript;

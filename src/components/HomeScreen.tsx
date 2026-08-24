@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import LoginModal from "./LoginModal";
-import axios from "axios";
+import api from "../../lib/Axios";
 import { useRouter } from "next/navigation";
 
 const features = [
@@ -71,65 +71,69 @@ type User = {
 export default function HomeScreen() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
 
-  
   const handleClick = () => {
     if (user) {
       router.push("/dashboard");
     } else {
-     setLoginOpen(true)
+      setLoginOpen(true);
+    }
+  };
+
+  
+  const fetchUser = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.get("/api/auth/getMe");
+      setUser(response.data.user);
+    } catch (err) {
+      setUser(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        setIsLoading(true);
-        const response = await axios.get("/api/auth/getMe");
-        setUser(response.data.user);
-        
-      } catch (err) {
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchUser();
   }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
-        setOpen(false); 
+        setOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
-    
-  
-  return () => {
+
+    return () => {
       document.removeEventListener("mousedown", handler);
     };
   }, []);
 
- 
   const handleLogout = async () => {
-    await axios.get("/api/auth/logOut");
+    try {
+      await api.get("/api/auth/logOut");
+      setUser(null); 
+      setOpen(false);
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
   };
 
-  if (isLoading) return <div>Loading...</div>;
+  const handleLoginSuccess = () => {
+    setLoginOpen(false);
+    fetchUser(); 
+  };
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#F3F4F4] text-black">
-      {/* Background */}
-    
-
       {/* NAVBAR */}
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 lg:px-8 ">
+      <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 lg:px-8">
         <Link href="/" className="flex items-center gap-2">
           <motion.div
             whileHover={{ rotate: 10, scale: 1.08 }}
@@ -137,62 +141,56 @@ export default function HomeScreen() {
           >
             ✦
           </motion.div>
-
           <span className="text-lg font-semibold tracking-tight">
             SupportAI
           </span>
         </Link>
 
         <div className="hidden items-center gap-8 text-sm text-zinc-800 md:flex">
-          <a href="#features" className="transition hover:text-white">
+          <a href="#features" className="transition hover:text-emerald-400">
             Features
           </a>
-
-          <a href="#how-it-works" className="transition hover:text-white">
+          <a href="#how-it-works" className="transition hover:text-emerald-400">
             How it works
           </a>
-
-          <a href="#businesses" className="transition hover:text-white">
+          <a href="#businesses" className="transition hover:text-emerald-400">
             Businesses
           </a>
         </div>
 
-        <div className="flex items-center gap-3">
-          {user?.email ? (
-            <div className="relative " ref={popupRef}>
-              {/* Profile Avatar */}
+        <div className="flex items-center gap-3  ">
+          {isLoading ? (
+            // Skeleton placeholder instead of blocking the whole page
+            <div className="h-10 w-10 animate-pulse rounded-full bg-zinc-300 "  />
+          ) : user?.email ? (
+            <div className="relative" ref={popupRef}>
               <button
                 onClick={() => setOpen(!open)}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-lg font-semibold text-white transition hover:scale-105 active:scale-95"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-lg font-semibold text-white transition hover:scale-105 active:scale-95 cursor-pointer"
               >
                 {user.email.charAt(0).toUpperCase()}
               </button>
 
-              {/* Dropdown */}
               {open && (
                 <div className="absolute right-0 top-12 z-50 mt-1 w-56 rounded-xl border border-zinc-200 bg-white p-2 shadow-xl animate-in fade-in zoom-in-95 duration-200">
-                  {/* Email */}
                   <div className="mb-1 border-b border-zinc-100 px-3 py-2">
                     <p className="text-xs text-zinc-500">Signed in as</p>
-
                     <p className="truncate text-sm font-medium text-black">
                       {user.email}
                     </p>
                   </div>
 
-                  {/* Dashboard */}
                   <Link
                     href="/dashboard"
                     onClick={() => setOpen(false)}
-                    className="block w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-700 transition hover:bg-zinc-100"
+                    className="block w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-700 transition hover:bg-zinc-100 cursor-pointer"
                   >
                     Dashboard
                   </Link>
 
-                  {/* Logout */}
                   <button
                     onClick={handleLogout}
-                    className="mt-1 block w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 transition hover:bg-red-50"
+                    className="mt-1 block w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 transition hover:bg-red-50 cursor-pointer"
                   >
                     Logout
                   </button>
@@ -202,7 +200,7 @@ export default function HomeScreen() {
           ) : (
             <button
               onClick={() => setLoginOpen(true)}
-              className="rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200"
+              className="rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200 cursor-pointer"
             >
               Login
             </button>
@@ -212,8 +210,7 @@ export default function HomeScreen() {
 
       {/* HERO */}
       <section className="relative mx-auto max-w-7xl px-5 pb-20 pt-10 lg:px-8 lg:pb-28 lg:pt-10">
-        <div className="grid items-center gap-14 lg:grid-cols-2 ">
-          {/* LEFT */}
+        <div className="grid items-center gap-14 lg:grid-cols-2">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -240,11 +237,10 @@ export default function HomeScreen() {
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <button
-                 onClick={handleClick}
-                className="group flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-black bg-black/[0.03] transition hover:bg-zinc-200"
+                onClick={handleClick}
+                className="group flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-black bg-black/[0.03] transition hover:bg-zinc-200 cursor-pointer"
               >
                 {user ? "Go to Dashboard" : "Create your AI agent"}
-                
                 <motion.span initial={{ x: 0 }} whileHover={{ x: 4 }}>
                   →
                 </motion.span>
@@ -272,40 +268,31 @@ export default function HomeScreen() {
             className="relative"
           >
             <motion.div
-              animate={{
-                y: [0, -8, 0],
-              }}
-              transition={{
-                duration: 5,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
               className="relative mx-auto max-w-md"
             >
-              {/* Glow */}
               <div className="absolute inset-0 -z-10 rounded-[30px] bg-grey-500/20 blur-3xl" />
 
               <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[#F9F6F3] shadow-2xl shadow-black">
-                {/* Chat header */}
-                <div className="flex items-center justify-between border-b bg-black border-white/10 px-5 py-4 ">
+                <div className="flex items-center justify-between border-b bg-black border-white/10 px-5 py-4">
                   <div className="flex items-center gap-3">
                     <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br bg-[#F5C9B0] text-white">
                       ✦
                       <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#0d0d0f] bg-emerald-400" />
                     </div>
-
                     <div>
-                      <p className="text-sm font-medium text-white">SupportAI</p>
+                      <p className="text-sm font-medium text-white">
+                        SupportAI
+                      </p>
                       <p className="text-xs text-emerald-400">
                         Online · AI Assistant
                       </p>
                     </div>
                   </div>
-
                   <span className="text-zinc-500">•••</span>
                 </div>
 
-                {/* Messages */}
                 <div className="space-y-5 p-5 text-black">
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -337,13 +324,11 @@ export default function HomeScreen() {
                   </motion.div>
                 </div>
 
-                {/* Input */}
                 <div className="border-t border-black/10 p-4">
                   <div className="flex items-center justify-between rounded-xl border border-black/10 bg-white px-4 py-3">
                     <span className="text-sm text-zinc-600">
                       Ask anything...
                     </span>
-
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F5C9B0] border-black/10 text-black">
                       ↑
                     </div>
@@ -361,7 +346,6 @@ export default function HomeScreen() {
           <p className="text-sm text-zinc-500">
             Built for businesses that care about their customers.
           </p>
-
           <div className="flex flex-wrap justify-center gap-5 text-xs text-zinc-600 sm:gap-8">
             <span>24/7 SUPPORT</span>
             <span>AI POWERED</span>
@@ -382,18 +366,16 @@ export default function HomeScreen() {
           <p className="mb-3 text-sm font-medium text-violet-400">
             POWERFUL SUPPORT
           </p>
-
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             Everything your AI agent needs.
           </h2>
-
           <p className="mt-4 text-zinc-400">
             Give your customers instant answers while reducing repetitive
             support work for your team.
           </p>
         </motion.div>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 ">
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((feature, index) => (
             <motion.div
               key={feature.title}
@@ -407,9 +389,7 @@ export default function HomeScreen() {
               <div className="mb-8 flex h-11 w-11 items-center justify-center rounded-xl bg-white text-black">
                 {feature.icon}
               </div>
-
               <h3 className="font-medium">{feature.title}</h3>
-
               <p className="mt-3 text-sm leading-6 text-zinc-500">
                 {feature.description}
               </p>
@@ -419,20 +399,15 @@ export default function HomeScreen() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section
-        id="how-it-works"
-        className="border-y border-white/5 bg-white/[0.015]"
-      >
+      <section id="how-it-works" className="border-y border-white/5 bg-white/[0.015]">
         <div className="mx-auto max-w-7xl px-5 py-24 lg:px-8">
           <div className="text-center">
             <p className="mb-3 text-sm font-medium text-violet-400">
               SIMPLE SETUP
             </p>
-
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
               From business information to AI support.
             </h2>
-
             <p className="mx-auto mt-4 max-w-xl text-zinc-500">
               No complicated setup. Just give your AI agent the knowledge it
               needs and put it on your website.
@@ -440,9 +415,7 @@ export default function HomeScreen() {
           </div>
 
           <div className="relative mt-16 grid gap-10 md:grid-cols-3">
-            {/* Connecting line */}
             <div className="absolute left-[16%] right-[16%] top-8 hidden h-px bg-white/10 md:block" />
-
             {steps.map((step, index) => (
               <motion.div
                 key={step.number}
@@ -458,9 +431,7 @@ export default function HomeScreen() {
                 >
                   {step.number}
                 </motion.div>
-
                 <h3 className="mt-7 font-medium">{step.title}</h3>
-
                 <p className="mx-auto mt-3 max-w-xs text-sm leading-6 text-zinc-500">
                   {step.description}
                 </p>
@@ -479,23 +450,24 @@ export default function HomeScreen() {
             viewport={{ once: true }}
           >
             <p className="mb-3 text-sm font-medium text-blue-400">ONE SCRIPT</p>
-
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
               Add AI support to your website in minutes.
             </h2>
-
             <p className="mt-5 leading-7 text-zinc-500">
               Once your AI agent is ready, simply copy one script into your
               website. Your customers can immediately start chatting with your
               AI support assistant.
             </p>
-
-            <Link
-              href="/register"
-              className="mt-8 inline-flex rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black"
-            >
-              Create your agent →
-            </Link>
+            <button
+                onClick={handleClick}
+                  className="mt-8 inline-flex rounded-xl bg-white px-7 py-3.5 text-sm font-semibold text-black transition hover:bg-zinc-200 cursor-pointer"
+              >
+                {user ? "Go to Dashboard" : "Create your agent "}
+                <motion.span initial={{ x: 0 }} whileHover={{ x: 4 }}>
+                  →
+                </motion.span>
+              </button>
+         
           </motion.div>
 
           <motion.div
@@ -527,16 +499,12 @@ export default function HomeScreen() {
       </section>
 
       {/* BUSINESSES */}
-      <section
-        id="businesses"
-        className="border-y border-white/5 bg-white/[0.015]"
-      >
+      <section id="businesses" className="border-y border-white/5 bg-white/[0.015]">
         <div className="mx-auto max-w-7xl px-5 py-24 lg:px-8">
           <div className="text-center">
             <p className="text-sm font-medium text-violet-400">
               BUILT FOR EVERY BUSINESS
             </p>
-
             <h2 className="mt-3 text-3xl font-semibold tracking-tight">
               One AI agent. Any business.
             </h2>
@@ -574,22 +542,25 @@ export default function HomeScreen() {
             <p className="text-sm font-medium text-violet-400">
               READY TO AUTOMATE?
             </p>
-
             <h2 className="mx-auto mt-4 max-w-2xl text-3xl font-semibold tracking-tight sm:text-5xl">
               Let AI handle your repetitive support questions.
             </h2>
-
             <p className="mx-auto mt-5 max-w-xl text-zinc-500">
               Create your AI support agent and give your customers a faster way
               to get help.
             </p>
-
-            <Link
-              href="/register"
-              className="mt-8 inline-flex rounded-xl bg-white px-7 py-3.5 text-sm font-semibold text-black transition hover:bg-zinc-200"
-            >
-              Build your AI Agent →
-            </Link>
+            
+             <button
+                onClick={handleClick}
+                className="mt-8 inline-flex rounded-xl bg-white px-7 py-3.5 text-sm font-semibold text-black transition hover:bg-zinc-200 cursor-pointer"
+              >
+                {user ? "Go to Dashboard" : " Build your AI Agent"}
+                <motion.span initial={{ x: 0 }} whileHover={{ x: 4 }}>
+                  →
+                </motion.span>
+              </button>
+             
+        
           </div>
         </motion.div>
       </section>
@@ -603,11 +574,15 @@ export default function HomeScreen() {
             </div>
             <span>SupportAI</span>
           </div>
-
           <p>© 2026 SupportAI. All rights reserved.</p>
         </div>
       </footer>
-      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+
+      <LoginModal
+        open={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        onSuccess={handleLoginSuccess}
+      />
     </main>
   );
 }
