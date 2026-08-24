@@ -14,7 +14,7 @@ function EmbedContent() {
   const navigate = useRouter();
 
   const embedCode = `  <script 
-        src="https://soppert-ai-5gk9.vercel.app/chatBot.js" 
+        src="https://suppot-ai-pied.vercel.app/chatBot.js" 
          data-owner-id ="${userId}" >
      </script>`;
 
