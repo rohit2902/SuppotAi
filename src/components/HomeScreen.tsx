@@ -231,8 +231,7 @@ export default function HomeScreen() {
             </h1>
 
             <p className="mt-7 max-w-xl text-base leading-7 text-zinc-400 sm:text-lg">
-              Tell us about your business and let AI handle your customer
-              conversations 24/7.
+              Train your AI with your business knowledge and let it handle customer conversations 24/7
             </p>
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
