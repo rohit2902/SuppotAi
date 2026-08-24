@@ -1,5 +1,5 @@
 (function () {
-  const api_url = "http://localhost:3000/api/chat";
+  const api_url = "https://suppot-ai-pied.vercel.app/api/chat";
   const scriptTag = document.currentScript;
   const ownerId = scriptTag.getAttribute("data-owner-id");
 
@@ -251,7 +251,7 @@ async function sendMessage() {
   messages.scrollTop = messages.scrollHeight;
 
   try {
-    const response = await fetch("http://localhost:3000/api/chat", {
+    const response = await fetch("https://suppot-ai-pied.vercel.app/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
