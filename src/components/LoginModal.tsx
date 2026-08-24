@@ -53,7 +53,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
       });
       console.log("Login successful:", response.data);
        router.push("/")
-       onClose()
+       
 
     } catch (err) {
       setError(
