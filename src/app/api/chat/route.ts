@@ -66,9 +66,10 @@ ANSWER
     }
 
     const ai = new GoogleGenAI({ apiKey: process.env.Google_Gemini_Api_Key });
+   
 
     const interaction = await ai.interactions.create({
-      model: "gemini-3.7-flash",
+      model: "gemini-3.1-flash-lite",
       input: prompt,
     });
 
